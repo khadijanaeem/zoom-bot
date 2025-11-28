@@ -1,6 +1,17 @@
-
 [build]
 builder = "nixpacks"
 
 [build.nixpacks]
-pkgs = ["python3", "gcc", "gnumake", "nodejs", "git", "glibc", "pkg-config"]
+pkgs = [
+  "python3",
+  "gnumake",
+  "gcc",
+  "gpp",
+  "git",
+  "nodejs",
+  "pkg-config",
+  "glibc"
+]
+
+[deploy]
+start = "node src/index.js"
