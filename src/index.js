@@ -17,6 +17,14 @@ app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   next();
 });
+
+/* -----------------------------
+   ROOT ROUTE FOR HOME URL
+--------------------------------*/
+app.get("/", (req, res) => {
+  res.send("<h1>EmpowHR Zoom Bot</h1><p>OWASP OK</p>");
+});
+
 /* -----------------------------
    VERIFY ZOOM WEBHOOK SIGNATURE
 --------------------------------*/
