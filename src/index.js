@@ -39,21 +39,21 @@ app.get("/", (req, res) => {
    CORRECT ZOOM SIGNATURE VERIFICATION
 --------------------------------------------------*/
 function verifyZoomSignature(req) {
-  const timestamp = req.headers["x-zm-request-timestamp"];
-  const signature = req.headers["x-zm-signature"];
-  const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
+  const message = req.headers["x-zm-request-timestamp"] 
+                + req.path 
+                + JSON.stringify(req.body);
 
-  if (!timestamp || !signature || !secret) return false;
+  const hashForVerify = crypto
+    .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
+    .update(message)
+    .digest("hex");
 
-  // The EXACT message Zoom signs
-  const message = timestamp + req.originalUrl + req.rawBody;
+  const expectedSignature = `v0=${hashForVerify}`;
+  const receivedSignature = req.headers["x-zm-signature"];
 
-  const hash = crypto.createHmac("sha256", secret).update(message).digest("hex");
-
-  const expected = `v0=${hash}`;
-
-  return expected === signature;
+  return expectedSignature === receivedSignature;
 }
+
 
 /* ------------------------------------------------
    WEBHOOK ENDPOINT
