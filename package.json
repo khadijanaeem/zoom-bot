@@ -11,7 +11,7 @@
     "node": ">=20.3.0"
   },
   "dependencies": {
-    "@zoom/rtms": "github:zoom/rtms"
+    "@zoom/rtms": "github:zoom/rtms",
 
     "express": "^4.19.2"
   }
