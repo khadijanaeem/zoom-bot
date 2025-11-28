@@ -65,6 +65,7 @@ function verifyZoomSignature(req) {
    WEBHOOK ENDPOINT
 --------------------------------------------------*/
 app.post("/zoom/webhook", (req, res) => {
+     req.url = "/zoom/webhook"; 
   if (!verifyZoomSignature(req)) {
     console.log("❌ Invalid Zoom signature");
     return res.status(401).send("invalid signature");
