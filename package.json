@@ -2,10 +2,10 @@
   "name": "zoom-bot",
   "version": "1.0.0",
   "description": "EmpowHR Zoom RTMS bot service",
-  "main": "index.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node src/index.js"
   },
   "engines": {
     "node": ">=20.3.0"
