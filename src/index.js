@@ -42,15 +42,23 @@ function verifyZoomSignature(req) {
   const timestamp = req.headers["x-zm-request-timestamp"];
   const signature = req.headers["x-zm-signature"];
 
-  const message = timestamp + req.path + JSON.stringify(req.body);
+  // Zoom ALWAYS signs with EXACT path, WITHOUT query or trailing slash
+  const path = "/zoom/webhook";
+
+  const body = JSON.stringify(req.body);
+
+  const message = timestamp + path + body;
 
   const hash = crypto
     .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
     .update(message)
     .digest("hex");
 
-  return signature === `v0=${hash}`;
+  const expected = `v0=${hash}`;
+
+  return signature === expected;
 }
+
 
 
 /* ------------------------------------------------
