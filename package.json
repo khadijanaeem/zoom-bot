@@ -8,10 +8,10 @@
     "start": "node src/index.js"
   },
   "engines": {
-    "node": ">=20.3.0"
+    "node": "20.x || 22.x || 24.x"
   },
-  "dependencies": {
-    "@zoom/rtms": "github:zoom/rtms",
-    "express": "^4.19.2"
+  "dependencies": {"@zoom/rtms": "^0.0.7"
+,
+"express": "^4.19.2"
   }
 }
