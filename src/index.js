@@ -3,11 +3,21 @@ import crypto from "crypto";
 import rtms from "@zoom/rtms";
 
 const app = express();
-app.use(express.json());
 const PORT = process.env.PORT || 8080;
 
+/* ------------------------------------------------
+   CAPTURE RAW BODY FOR ZOOM SIGNATURE VALIDATION
+--------------------------------------------------*/
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString("utf8");
+    },
+  })
+);
+
 /* -----------------------------
-   OWASP SECURITY HEADERS (REQUIRED BY ZOOM)
+   OWASP SECURITY HEADERS
 --------------------------------*/
 app.use((req, res, next) => {
   res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
@@ -19,33 +29,36 @@ app.use((req, res, next) => {
 });
 
 /* -----------------------------
-   ROOT ROUTE FOR HOME URL
+   ROOT ROUTE
 --------------------------------*/
 app.get("/", (req, res) => {
   res.send("<h1>EmpowHR Zoom Bot</h1><p>OWASP OK</p>");
 });
 
-/* -----------------------------
-   VERIFY ZOOM WEBHOOK SIGNATURE
---------------------------------*/
+/* ------------------------------------------------
+   CORRECT ZOOM SIGNATURE VERIFICATION
+--------------------------------------------------*/
 function verifyZoomSignature(req) {
-  const message = req.headers["x-zm-request-timestamp"] + req.originalUrl + JSON.stringify(req.body);
-  const hmac = crypto
-    .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
-    .update(message)
-    .digest("hex");
+  const timestamp = req.headers["x-zm-request-timestamp"];
+  const signature = req.headers["x-zm-signature"];
+  const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
 
-  const expectedSignature = `v0=${hmac}`;
-  const receivedSignature = req.headers["x-zm-signature"];
+  if (!timestamp || !signature || !secret) return false;
 
-  return expectedSignature === receivedSignature;
+  // The EXACT message Zoom signs
+  const message = timestamp + req.originalUrl + req.rawBody;
+
+  const hash = crypto.createHmac("sha256", secret).update(message).digest("hex");
+
+  const expected = `v0=${hash}`;
+
+  return expected === signature;
 }
 
-/* ---------------------------
+/* ------------------------------------------------
    WEBHOOK ENDPOINT
-----------------------------*/
+--------------------------------------------------*/
 app.post("/zoom/webhook", (req, res) => {
-  // 1. Verify webhook
   if (!verifyZoomSignature(req)) {
     console.log("❌ Invalid Zoom signature");
     return res.status(401).send("invalid signature");
@@ -56,18 +69,21 @@ app.post("/zoom/webhook", (req, res) => {
 
   console.log("🔔 Zoom Event:", event);
 
+  /* ---- URL VALIDATION ---- */
   if (event === "endpoint.url_validation") {
-    // Zoom URL verification
+    const plainToken = payload.plainToken;
+    const encryptedToken = crypto
+      .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
+      .update(plainToken)
+      .digest("hex");
+
     return res.json({
-      plainToken: payload.plainToken,
-      encryptedToken: crypto
-        .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
-        .update(payload.plainToken)
-        .digest("hex"),
+      plainToken,
+      encryptedToken,
     });
   }
 
-  // 2. RTMS event fired → join meeting
+  /* ---- RTMS MEETING STARTED ---- */
   if (event === "meeting.rtms_started") {
     console.log("🎉 RTMS START DETECTED");
 
@@ -92,16 +108,16 @@ app.post("/zoom/webhook", (req, res) => {
   res.status(200).send("OK");
 });
 
-/* -------------------------
+/* ------------------------------------------------
    HEALTH CHECK
----------------------------*/
+--------------------------------------------------*/
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
-/* -------------------------
+/* ------------------------------------------------
    START SERVER
----------------------------*/
+--------------------------------------------------*/
 app.listen(PORT, () => {
   console.log(`🚀 Zoom bot running on ${PORT}`);
 });
