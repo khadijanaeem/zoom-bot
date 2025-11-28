@@ -1,5 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[build.nixpacks]
-pkgs = ["python3", "gcc", "gnumake", "nodejs", "git", "glibc", "pkg-config"]
