@@ -7,6 +7,17 @@ app.use(express.json());
 const PORT = process.env.PORT || 8080;
 
 /* -----------------------------
+   OWASP SECURITY HEADERS (REQUIRED BY ZOOM)
+--------------------------------*/
+app.use((req, res, next) => {
+  res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Content-Security-Policy", "default-src 'self'");
+  res.setHeader("X-Frame-Options", "DENY");
+  next();
+});
+/* -----------------------------
    VERIFY ZOOM WEBHOOK SIGNATURE
 --------------------------------*/
 function verifyZoomSignature(req) {
