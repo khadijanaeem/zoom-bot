@@ -39,7 +39,7 @@ function verifyZoomSignature(req) {
   const receivedSignature = req.headers["x-zm-signature"];
   
   // ✅ FIX: Use your ACTUAL environment variable name
-  const secret = process.env.ZOOM_MEBHOOK_SECRET_TOKEN;
+  const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
  console.log("🔍 DEBUG - Headers received:");
   console.log("  x-zm-request-timestamp:", timestamp);
   console.log("  x-zm-signature:", receivedSignature);
@@ -141,6 +141,6 @@ app.get("/health", (req, res) => {
 ---------------------------*/
 app.listen(PORT, () => {
   console.log(`🚀 Zoom bot running on ${PORT}`);
-  console.log(`🔑 Secret token present: ${!!process.env.ZOOM_MEBHOOK_SECRET_TOKEN}`);
-  console.log(`🔑 Secret token starts with: ${process.env.ZOOM_MEBHOOK_SECRET_TOKEN ? process.env.ZOOM_MEBHOOK_SECRET_TOKEN.substring(0, 10) + '...' : 'MISSING'}`);
+  console.log(`🔑 Secret token present: ${!!process.env.ZOOM_WEBHOOK_SECRET_TOKEN}`);
+  console.log(`🔑 Secret token starts with: ${process.env.ZOOM_WEBHOOK_SECRET_TOKEN ? process.env.ZOOM_MEBHOOK_SECRET_TOKEN.substring(0, 10) + '...' : 'MISSING'}`);
 });
