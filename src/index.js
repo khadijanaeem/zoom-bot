@@ -4,6 +4,20 @@ import rtms from "@zoom/rtms";
 
 const app = express();
 
+// ✅ ADD SECURITY HEADERS MIDDLEWARE
+app.use((req, res, next) => {
+  // Add required OWASP headers
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Additional security headers (recommended)
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  next();
+});
+
 // ✅ CRITICAL FIX: Use raw body for webhook verification
 app.use("/zoom/webhook", express.raw({ type: "application/json" }));
 // Use JSON parsing for all other routes
