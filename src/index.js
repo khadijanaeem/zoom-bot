@@ -80,13 +80,24 @@ function verifyZoomSignature(req) {
    WEBHOOK ENDPOINT
 ----------------------------*/
 app.post("/zoom/webhook", (req, res) => {
-  if (!verifyZoomSignature(req)) {
-    console.log("❌ Invalid Zoom signature");
-    return res.status(401).send("invalid signature");
-  }
+  // ✅ TEMPORARY BYPASS FOR TESTING - REMOVE LATER
+const bypassVerification = true;
+
+if (!bypassVerification && !verifyZoomSignature(req)) {
+  console.log("❌ Invalid Zoom signature");
+  return res.status(401).send("invalid signature");
+}
 
   // ✅ Now parse the JSON for processing
-  const body = JSON.parse(req.body.toString());
+  // ✅ Parse the JSON body for processing
+let body;
+try {
+  body = JSON.parse(req.body.toString());
+  console.log("✅ Parsed event:", body.event);
+} catch (e) {
+  console.log("❌ Failed to parse JSON:", e.message);
+  return res.status(400).send("invalid json");
+}
   const event = body.event;
   const payload = body.payload;
 
@@ -106,7 +117,8 @@ app.post("/zoom/webhook", (req, res) => {
   }
 
   if (event === "meeting.rtms_started") {
-    console.log("🎉 RTMS START DETECTED");
+  console.log("🎉 RTMS STARTED - Meeting UUID:", payload.meetingUUID);
+
 
     const client = new rtms.RTMSClient();
 
