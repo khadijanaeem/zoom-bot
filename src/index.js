@@ -58,22 +58,21 @@ class ZoomBot {
   }
 
   async joinMeeting() {
-    try {
-      console.log(`🤖 Launching bot for meeting: ${this.meetingId}`);
-      
-      // Launch browser
-      this.browser = await puppeteer.launch({
-        headless: false, // Set to true in production
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--use-fake-ui-for-media-stream',
-          '--use-fake-device-for-media-stream',
-          '--window-size=1920,1080'
-        ],
-        defaultViewport: { width: 1920, height: 1080 }
-      });
-
+  try {
+    console.log(`🤖 Launching bot for meeting: ${this.meetingId}`);
+    
+    // Launch browser in headless mode for Railway
+    this.browser = await puppeteer.launch({
+      headless: true, // Changed to true for Railway
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--window-size=1920,1080'
+      ],
+      defaultViewport: { width: 1920, height: 1080 }
+    });
       this.page = await this.browser.newPage();
       
       // Navigate to Zoom join page
