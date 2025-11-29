@@ -95,7 +95,7 @@ app.post("/zoom/webhook", (req, res) => {
   if (event === "endpoint.url_validation") {
     const plainToken = payload.plainToken;
     const encryptedToken = crypto
-      .createHmac("sha256", process.env.ZOOM_MEBHOOK_SECRET_TOKEN) // ✅ Fixed variable name
+      .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN) // ✅ Fixed variable name
       .update(plainToken)
       .digest("hex");
 
