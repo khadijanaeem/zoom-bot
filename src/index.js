@@ -3,71 +3,48 @@ import crypto from "crypto";
 import rtms from "@zoom/rtms";
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 8080;
 
-/* ------------------------------------------------
-   CAPTURE RAW BODY FOR ZOOM SIGNATURE VALIDATION
---------------------------------------------------*/
-app.use(
-  express.json({
-    verify: (req, res, buf) => {
-      req.rawBody = buf.toString("utf8");
-    },
-  })
-);
-
 /* -----------------------------
-   OWASP SECURITY HEADERS
+   VERIFY ZOOM WEBHOOK SIGNATURE
 --------------------------------*/
-app.use((req, res, next) => {
-  res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("Content-Security-Policy", "default-src 'self'");
-  res.setHeader("X-Frame-Options", "DENY");
-  next();
-});
-
-/* -----------------------------
-   ROOT ROUTE
---------------------------------*/
-app.get("/", (req, res) => {
-  res.send("<h1>EmpowHR Zoom Bot</h1><p>OWASP OK</p>");
-});
-
-/* ------------------------------------------------
-   CORRECT ZOOM SIGNATURE VERIFICATION
---------------------------------------------------*/
 function verifyZoomSignature(req) {
   const timestamp = req.headers["x-zm-request-timestamp"];
-  const signature = req.headers["x-zm-signature"];
+  const receivedSignature = req.headers["x-zm-signature"];
+  const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
 
-  // Zoom ALWAYS signs with EXACT path, WITHOUT query or trailing slash
-  const path = "/zoom/webhook";
+  if (!timestamp || !receivedSignature || !secret) {
+    console.log("⚠️ Missing timestamp/signature/secret");
+    return false;
+  }
 
-  const body = JSON.stringify(req.body);
-
-  const message = timestamp + path + body;
+  const bodyJson = JSON.stringify(req.body);
+  const message = `v0:${timestamp}:${bodyJson}`;
 
   const hash = crypto
-    .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
+    .createHmac("sha256", secret)
     .update(message)
     .digest("hex");
 
-  const expected = `v0=${hash}`;
+  const expectedSignature = `v0=${hash}`;
 
-  return signature === expected;
+  // DEBUG LOGS – will help us if it still fails
+  console.log("🔐 Zoom signature debug:");
+  console.log("  timestamp:", timestamp);
+  console.log("  bodyJson:", bodyJson);
+  console.log("  expected:", expectedSignature);
+  console.log("  received:", receivedSignature);
+
+  return expectedSignature === receivedSignature;
 }
 
-
-
-/* ------------------------------------------------
+/* ---------------------------
    WEBHOOK ENDPOINT
---------------------------------------------------*/
+----------------------------*/
 app.post("/zoom/webhook", (req, res) => {
-     req.url = "/zoom/webhook"; 
   if (!verifyZoomSignature(req)) {
-    console.log("❌ Invalid Zoom signature");
+    console.log(" Invalid Zoom signature");
     return res.status(401).send("invalid signature");
   }
 
@@ -76,7 +53,6 @@ app.post("/zoom/webhook", (req, res) => {
 
   console.log("🔔 Zoom Event:", event);
 
-  /* ---- URL VALIDATION ---- */
   if (event === "endpoint.url_validation") {
     const plainToken = payload.plainToken;
     const encryptedToken = crypto
@@ -90,7 +66,6 @@ app.post("/zoom/webhook", (req, res) => {
     });
   }
 
-  /* ---- RTMS MEETING STARTED ---- */
   if (event === "meeting.rtms_started") {
     console.log("🎉 RTMS START DETECTED");
 
@@ -115,16 +90,17 @@ app.post("/zoom/webhook", (req, res) => {
   res.status(200).send("OK");
 });
 
-/* ------------------------------------------------
+
+/* -------------------------
    HEALTH CHECK
---------------------------------------------------*/
+---------------------------*/
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
-/* ------------------------------------------------
+/* -------------------------
    START SERVER
---------------------------------------------------*/
+---------------------------*/
 app.listen(PORT, () => {
   console.log(`🚀 Zoom bot running on ${PORT}`);
 });
