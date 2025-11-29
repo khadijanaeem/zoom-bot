@@ -97,6 +97,18 @@ app.post("/zoom/webhook", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
+app.get("/privacy", (req, res) => {
+  res.send("<h1>Privacy Policy</h1><p>This is a development-only placeholder policy for the EmpowHR Zoom Bot.</p>");
+});
+
+app.get("/terms", (req, res) => {
+  res.send("<h1>Terms of Use</h1><p>These are development-only placeholder terms for the EmpowHR Zoom Bot.</p>");
+});
+
+app.get("/support", (req, res) => {
+  res.send("<h1>Support</h1><p>For support, contact: your-email@example.com</p>");
+});
+
 
 /* -------------------------
    START SERVER
