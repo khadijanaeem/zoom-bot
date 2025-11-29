@@ -325,12 +325,9 @@ app.get("/bots", (req, res) => {
   });
 });
 
-/* -------------------------
-   ROOT & HEALTH ROUTES
----------------------------*/
 app.get("/", (req, res) => {
   res.json({ 
-    message: "🤖 AI Interview Bot API",
+    message: "🤖 EmpowHR Zoom Bot API",
     status: "Ready for interviews!",
     version: "1.0",
     endpoints: {
@@ -352,11 +349,8 @@ app.get("/health", (req, res) => {
   });
 });
 
-/* -------------------------
-   START SERVER
----------------------------*/
 app.listen(PORT, () => {
-  console.log(`🚀 AI Interview Bot running on ${PORT}`);
+  console.log(`🚀 EmpowHR Zoom Bot running on ${PORT}`);
   console.log(`📝 Preloaded ${INTERVIEW_QUESTIONS.length} interview questions`);
   console.log(`🤖 Endpoints:`);
   console.log(`   POST /bot/join - Start bot for meeting`);
