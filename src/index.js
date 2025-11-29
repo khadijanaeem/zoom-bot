@@ -2,7 +2,7 @@ import express from "express";
 import { chromium } from 'playwright';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-
+import crypto from "crypto";
 const app = express();
 const execAsync = promisify(exec);
 
@@ -156,6 +156,62 @@ class ZoomBot {
 /* -------------------------
    API ENDPOINTS
 ---------------------------*/
+/* -------------------------
+   ZOOM WEBHOOK ENDPOINT (for your existing Zoom app)
+---------------------------*/
+app.use("/zoom/webhook", express.raw({ type: "application/json" }));
+
+app.post("/zoom/webhook", (req, res) => {
+  console.log("📨 Zoom webhook received");
+  
+  // Parse the webhook body
+  let body;
+  try {
+    body = JSON.parse(req.body.toString());
+  } catch (e) {
+    console.log("❌ Failed to parse webhook JSON");
+    return res.status(400).send("invalid json");
+  }
+
+  const event = body.event;
+  const payload = body.payload;
+
+  console.log("🔔 Zoom Webhook Event:", event);
+
+  // Handle URL validation challenge
+  if (event === "endpoint.url_validation") {
+    const plainToken = payload.plainToken;
+    const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
+    
+    if (!secret) {
+      console.log("❌ No webhook secret configured");
+      return res.status(400).send("secret not configured");
+    }
+
+    const hash = crypto
+      .createHmac("sha256", secret)
+      .update(plainToken)
+      .digest("hex");
+
+    console.log("✅ URL validation response sent");
+    return res.json({
+      plainToken,
+      encryptedToken: hash
+    });
+  }
+
+  // Log other events but don't auto-join (using manual join now)
+  if (event === "meeting.started") {
+    console.log(`📅 Meeting started: ${payload.object.topic} (${payload.object.id})`);
+    console.log("💡 Tip: Use POST /bot/join to start the interview bot");
+  }
+
+  if (event === "meeting.ended") {
+    console.log(`🛑 Meeting ended: ${payload.object.id}`);
+  }
+
+  res.status(200).send("OK");
+});
 app.use(express.json());
 
 app.post("/bot/join", async (req, res) => {
