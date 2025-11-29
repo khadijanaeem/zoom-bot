@@ -3,7 +3,18 @@ import crypto from "crypto";
 import rtms from "@zoom/rtms";
 
 const app = express();
-app.use(express.json());
+
+// ✅ CRITICAL FIX: Use raw body for webhook verification
+app.use("/zoom/webhook", express.raw({ type: "application/json" }));
+// Use JSON parsing for all other routes
+app.use((req, res, next) => {
+  if (req.path === "/zoom/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 const PORT = process.env.PORT || 8080;
 
 /* -----------------------------
@@ -12,15 +23,18 @@ const PORT = process.env.PORT || 8080;
 function verifyZoomSignature(req) {
   const timestamp = req.headers["x-zm-request-timestamp"];
   const receivedSignature = req.headers["x-zm-signature"];
-  const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
+  
+  // ✅ FIX: Use your ACTUAL environment variable name
+  const secret = process.env.ZOOM_MEBHOOK_SECRET_TOKEN;
 
   if (!timestamp || !receivedSignature || !secret) {
     console.log("⚠️ Missing timestamp/signature/secret");
     return false;
   }
 
-  const bodyJson = JSON.stringify(req.body);
-  const message = `v0:${timestamp}:${bodyJson}`;
+  // ✅ FIX: Use raw body instead of JSON.stringify()
+  const rawBody = req.body.toString(); // This is the raw JSON string
+  const message = `v0:${timestamp}:${rawBody}`;
 
   const hash = crypto
     .createHmac("sha256", secret)
@@ -29,10 +43,10 @@ function verifyZoomSignature(req) {
 
   const expectedSignature = `v0=${hash}`;
 
-  // DEBUG LOGS – will help us if it still fails
+  // DEBUG LOGS
   console.log("🔐 Zoom signature debug:");
   console.log("  timestamp:", timestamp);
-  console.log("  bodyJson:", bodyJson);
+  console.log("  body length:", rawBody.length);
   console.log("  expected:", expectedSignature);
   console.log("  received:", receivedSignature);
 
@@ -44,19 +58,21 @@ function verifyZoomSignature(req) {
 ----------------------------*/
 app.post("/zoom/webhook", (req, res) => {
   if (!verifyZoomSignature(req)) {
-    console.log(" Invalid Zoom signature");
+    console.log("❌ Invalid Zoom signature");
     return res.status(401).send("invalid signature");
   }
 
-  const event = req.body.event;
-  const payload = req.body.payload;
+  // ✅ Now parse the JSON for processing
+  const body = JSON.parse(req.body.toString());
+  const event = body.event;
+  const payload = body.payload;
 
   console.log("🔔 Zoom Event:", event);
 
   if (event === "endpoint.url_validation") {
     const plainToken = payload.plainToken;
     const encryptedToken = crypto
-      .createHmac("sha256", process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
+      .createHmac("sha256", process.env.ZOOM_MEBHOOK_SECRET_TOKEN) // ✅ Fixed variable name
       .update(plainToken)
       .digest("hex");
 
@@ -90,29 +106,17 @@ app.post("/zoom/webhook", (req, res) => {
   res.status(200).send("OK");
 });
 
-
 /* -------------------------
    HEALTH CHECK
 ---------------------------*/
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
-app.get("/privacy", (req, res) => {
-  res.send("<h1>Privacy Policy</h1><p>This is a development-only placeholder policy for the EmpowHR Zoom Bot.</p>");
-});
-
-app.get("/terms", (req, res) => {
-  res.send("<h1>Terms of Use</h1><p>These are development-only placeholder terms for the EmpowHR Zoom Bot.</p>");
-});
-
-app.get("/support", (req, res) => {
-  res.send("<h1>Support</h1><p>For support, contact: your-email@example.com</p>");
-});
-
 
 /* -------------------------
    START SERVER
 ---------------------------*/
 app.listen(PORT, () => {
   console.log(`🚀 Zoom bot running on ${PORT}`);
+  console.log(`🔑 Using secret token: ${process.env.ZOOM_MEBHOOK_SECRET_TOKEN ? "✓ Present" : "✗ Missing"}`);
 });
