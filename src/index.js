@@ -1,6 +1,5 @@
 import express from "express";
 import crypto from "crypto";
-import rtms from "@zoom/rtms";
 
 const app = express();
 
@@ -18,7 +17,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use("/zoom/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 
@@ -26,6 +24,32 @@ const PORT = process.env.PORT || 8080;
 
 // Store active meetings
 const activeMeetings = new Map();
+
+/* -------------------------
+   BOT JOIN IMPLEMENTATION
+---------------------------*/
+async function joinMeetingAsBot(meetingId, meetingTopic) {
+  try {
+    console.log(`🤖 Attempting to join meeting: ${meetingId} - ${meetingTopic}`);
+    
+    // For now, just log that we would join
+    console.log(`📍 Meeting join link: https://zoom.us/j/${meetingId}`);
+    
+    // Store that bot is "joining" this meeting
+    activeMeetings.set(meetingId, {
+      topic: meetingTopic,
+      startTime: new Date(),
+      botStatus: 'joining',
+      participants: []
+    });
+    
+    // TODO: Implement actual Zoom SDK join logic
+    return true;
+  } catch (error) {
+    console.log("❌ Bot join failed:", error);
+    return false;
+  }
+}
 
 /* -------------------------
    WEBHOOK HANDLER
@@ -50,15 +74,8 @@ app.post("/zoom/webhook", (req, res) => {
     const topic = payload.object.topic;
     console.log(`🎯 Meeting started: ${topic} (${meetingId})`);
     
-    // Store meeting info
-    activeMeetings.set(meetingId, {
-      topic: topic,
-      startTime: new Date(),
-      participants: []
-    });
-    
-    // Here you would trigger your bot to join
-    console.log("🤖 Bot should join this meeting");
+    // ✅ ACTUALLY TRY TO JOIN THE MEETING
+    joinMeetingAsBot(meetingId, topic);
   }
 
   if (event === "meeting.ended") {
@@ -85,19 +102,37 @@ app.post("/zoom/webhook", (req, res) => {
    MANUAL BOT JOIN ENDPOINT
 ---------------------------*/
 app.post("/bot/join", async (req, res) => {
-  const { meetingId, password } = req.body;
+  const { meetingId, topic } = req.body;
   
   try {
-    console.log(`🤖 Manual bot join for meeting: ${meetingId}`);
-    // Implement manual join logic here
+    const success = await joinMeetingAsBot(meetingId, topic || "Manual Meeting");
     res.json({ 
-      success: true, 
-      message: "Bot join initiated",
-      meetingId: meetingId 
+      success: success, 
+      message: success ? "Bot join initiated" : "Join failed",
+      meetingId: meetingId,
+      joinLink: `https://zoom.us/j/${meetingId}`
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+/* -------------------------
+   ACTIVE MEETINGS STATUS
+---------------------------*/
+app.get("/meetings", (req, res) => {
+  const meetings = Array.from(activeMeetings.entries()).map(([id, data]) => ({
+    meetingId: id,
+    topic: data.topic,
+    botStatus: data.botStatus,
+    participants: data.participants.length,
+    startTime: data.startTime
+  }));
+  
+  res.json({
+    activeMeetings: activeMeetings.size,
+    meetings: meetings
+  });
 });
 
 /* -------------------------
@@ -124,7 +159,8 @@ app.get("/", (req, res) => {
       endpoints: {
         webhook: "POST /zoom/webhook",
         join: "POST /bot/join",
-        health: "GET /health"
+        health: "GET /health",
+        meetings: "GET /meetings"
       }
     });
   }
