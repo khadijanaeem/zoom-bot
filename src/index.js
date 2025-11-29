@@ -40,7 +40,11 @@ function verifyZoomSignature(req) {
   
   // ✅ FIX: Use your ACTUAL environment variable name
   const secret = process.env.ZOOM_MEBHOOK_SECRET_TOKEN;
-
+ console.log("🔍 DEBUG - Headers received:");
+  console.log("  x-zm-request-timestamp:", timestamp);
+  console.log("  x-zm-signature:", receivedSignature);
+  console.log("  Secret present:", !!secret);
+  console.log("  Secret length:", secret ? secret.length : 0);
   if (!timestamp || !receivedSignature || !secret) {
     console.log("⚠️ Missing timestamp/signature/secret");
     return false;
@@ -48,8 +52,13 @@ function verifyZoomSignature(req) {
 
   // ✅ FIX: Use raw body instead of JSON.stringify()
   const rawBody = req.body.toString(); // This is the raw JSON string
+  
+  console.log("  Raw body length:", rawBody.length);
+  console.log("  Raw body preview:", rawBody.substring(0, 200) + "...");
   const message = `v0:${timestamp}:${rawBody}`;
 
+  console.log("  Message length:", message.length);
+  console.log("  Message preview:", message.substring(0, 200) + "...");
   const hash = crypto
     .createHmac("sha256", secret)
     .update(message)
