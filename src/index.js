@@ -141,5 +141,6 @@ app.get("/health", (req, res) => {
 ---------------------------*/
 app.listen(PORT, () => {
   console.log(`🚀 Zoom bot running on ${PORT}`);
-  console.log(`🔑 Using secret token: ${process.env.ZOOM_MEBHOOK_SECRET_TOKEN ? "✓ Present" : "✗ Missing"}`);
+  console.log(`🔑 Secret token present: ${!!process.env.ZOOM_MEBHOOK_SECRET_TOKEN}`);
+  console.log(`🔑 Secret token starts with: ${process.env.ZOOM_MEBHOOK_SECRET_TOKEN ? process.env.ZOOM_MEBHOOK_SECRET_TOKEN.substring(0, 10) + '...' : 'MISSING'}`);
 });
