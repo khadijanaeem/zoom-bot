@@ -42,65 +42,67 @@ class ZoomBot {
     this.currentQuestionIndex = 0;
   }
 
-  async joinMeeting() {
-    try {
-      console.log(`🤖 Launching bot for meeting: ${this.meetingId}`);
+ async joinMeeting() {
+  try {
+    console.log(`🤖 Launching bot for meeting: ${this.meetingId}`);
+    
+    this.browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    this.page = await this.browser.newPage();
+    
+    // Use the web client join URL
+    const joinUrl = `https://zoom.us/wc/${this.meetingId}/join`;
+    console.log(`🔗 Joining: ${joinUrl}`);
+    
+    await this.page.goto(joinUrl, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 30000 
+    });
+
+    // Wait for page to load
+    await this.page.waitForTimeout(5000);
+
+    // Check if we're on the join page
+    const currentUrl = this.page.url();
+    if (currentUrl.includes('/wc/') && currentUrl.includes('/join')) {
+      console.log("✅ Successfully loaded join page");
       
-      // Launch browser with Playwright (much lighter)
-      this.browser = await chromium.launch({
-        headless: true
-      });
-
-      this.page = await this.browser.newPage();
-      
-      const joinUrl = `https://zoom.us/j/${this.meetingId}`;
-      console.log(`🔗 Joining: ${joinUrl}`);
-      
-      await this.page.goto(joinUrl, { waitUntil: 'networkidle' });
-
-      // Simple join process
-      await this.page.waitForTimeout(5000);
-      
-      // Try to find and click join buttons
-      const joinSelectors = [
-        '.preview-join-button',
-        '[aria-label="Join from Your Browser"]',
-        'button:has-text("Join")'
-      ];
-
-      for (const selector of joinSelectors) {
-        const button = await this.page.$(selector);
-        if (button) {
-          await button.click();
-          console.log("✅ Clicked join button");
-          break;
-        }
-      }
-
-      await this.page.waitForTimeout(3000);
-
-      // Enter name if needed
+      // Enter display name
       const nameInput = await this.page.$('input[type="text"]');
       if (nameInput) {
-        await nameInput.fill('AI Interviewer');
+        await nameInput.fill('AI Interviewer Bot');
         console.log("✅ Entered display name");
       }
 
-      // Final join
-      const finalJoin = await this.page.$('button:has-text("Join"), [aria-label="Join"]');
-      if (finalJoin) {
-        await finalJoin.click();
+      // Click join button
+      const joinBtn = await this.page.$('button:has-text("Join"), [aria-label*="Join"]');
+      if (joinBtn) {
+        await joinBtn.click();
+        console.log("✅ Clicked join button");
       }
 
       await this.page.waitForTimeout(10000);
+      
+      // Check if we successfully joined
+      if (this.page.url().includes('/wc/join')) {
+        console.log("❌ Still on join page - may need manual intervention");
+        return false;
+      }
+
       console.log(`✅ Bot successfully joined meeting: ${this.meetingId}`);
       return true;
-
-    } catch (error) {
-      console.log(`❌ Bot failed to join: ${error.message}`);
-      return false;
     }
+
+    return false;
+
+  } catch (error) {
+    console.log(`❌ Bot failed to join: ${error.message}`);
+    return false;
   }
+}
 
   async sendChatMessage(message) {
     try {
@@ -256,7 +258,14 @@ app.get("/", (req, res) => {
     }
   });
 });
-
+// Add this before app.listen()
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    timestamp: new Date().toISOString(),
+    activeBots: activeBots.size
+  });
+});
 app.listen(PORT, () => {
   console.log(`🚀 Zoom Bot running on ${PORT}`);
 });
