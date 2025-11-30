@@ -224,18 +224,20 @@ app.post("/bot/join", async (req, res) => {
   }
 
   try {
-    const bot = new ZoomBot(meetingId);
-    activeBots.set(meetingId, bot);
+    // Return the join link for manual testing
+    const joinLink = `https://zoom.us/j/${meetingId}`;
+    const message = `Please join this meeting manually: ${joinLink}. The bot will interact via chat.`;
     
-    const success = await bot.joinMeeting();
-    
-    if (success) {
-      setTimeout(() => bot.startInterview(), 5000);
-      res.json({ success: true, message: "Bot joined successfully" });
-    } else {
-      activeBots.delete(meetingId);
-      res.json({ success: false, message: "Failed to join meeting" });
-    }
+    console.log(`📋 Join link: ${joinLink}`);
+    await speakText("Please join the Zoom meeting manually. I will assist with interview questions.");
+
+    res.json({ 
+      success: true, 
+      message: "Join meeting manually",
+      joinLink: joinLink,
+      instructions: "Join the meeting and the bot will send chat messages"
+    });
+
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
